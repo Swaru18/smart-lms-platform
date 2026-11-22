@@ -1,14 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn, daysInMonth, formatDate, formatDuration, formatRate, initials, isoDate, shiftMonth, weekdayIndex } from "@/lib/format";
 import { courseMinutes } from "@/lib/metrics";
 import type { CalendarEvent, Course, DemoState, User } from "@/lib/types";
-import { DEMO_TODAY } from "@/lib/types";
 import { Button, Pill, ProgressBar } from "./ui";
 
 export function KpiCard({
@@ -155,23 +153,52 @@ export function CourseHealth({
   );
 }
 
-export function CalendarPanel({ events, weekStartsOn, compact = false }: { events: CalendarEvent[]; weekStartsOn: "mon" | "sun"; compact?: boolean }) {
-  const [cursor, setCursor] = useState({ year: 2026, month: 11 });
-  const [selected, setSelected] = useState(DEMO_TODAY);
+function todayStamp() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+export function CalendarPanel({
+  events,
+  weekStartsOn,
+  compact = false,
+  onCreate,
+}: {
+  events: CalendarEvent[];
+  weekStartsOn: "mon" | "sun";
+  compact?: boolean;
+  onCreate?: (input: { date: string; title: string; kind: CalendarEvent["kind"]; detail: string }) => string | null;
+}) {
+  const today = todayStamp();
+  const [cursor, setCursor] = useState({ year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) });
+  const [selected, setSelected] = useState(today);
+  const [view, setView] = useState<"month" | "week" | "agenda">(compact ? "agenda" : "month");
+  const [title, setTitle] = useState("");
+  const [kind, setKind] = useState<CalendarEvent["kind"]>("deadline");
+  const [detail, setDetail] = useState("");
+  const [error, setError] = useState("");
+  const [kindFilter, setKindFilter] = useState<"all" | CalendarEvent["kind"]>("all");
+  const visible = kindFilter === "all" ? events : events.filter((event) => event.kind === kindFilter);
   const count = daysInMonth(cursor.year, cursor.month);
   const first = weekdayIndex(cursor.year, cursor.month, 1);
   const offset = weekStartsOn === "mon" ? (first + 6) % 7 : first;
   const cells = [...Array(offset).fill(null), ...Array.from({ length: count }, (_, index) => index + 1)];
   const labels = weekStartsOn === "mon" ? ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] : ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-  const selectedEvents = events.filter((event) => event.date === selected);
-  const later = events.filter((event) => event.date > selected).slice(0, compact ? 3 : 6);
+  const selectedEvents = visible.filter((event) => event.date === selected);
+  const later = visible.filter((event) => event.date > selected).slice(0, compact ? 3 : 6);
+  const week = weekDates(selected, weekStartsOn);
+  const agenda = visible.filter((event) => event.date >= today).slice(0, compact ? 4 : 12);
   const monthLabel = new Date(Date.UTC(cursor.year, cursor.month - 1, 1)).toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 
   return (
     <section className="rounded-[14px] border border-line bg-card p-4 shadow-[var(--shadow)]">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[16px] font-semibold">{compact ? "Agenda" : monthLabel}</h2>
-        <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-[16px] font-semibold">{monthLabel}</h2>
+        <div className="flex flex-wrap items-center gap-1">
+          {(["month", "week", "agenda"] as const).map((item) => (
+            <button key={item} type="button" className={cn("h-8 rounded-[8px] px-2 text-[12px] capitalize", view === item ? "bg-[#CFAC87] text-[#392E27]" : "text-muted hover:bg-elevated")} onClick={() => setView(item)}>{item}</button>
+          ))}
+          <button type="button" className="h-8 rounded-[8px] px-2 text-[12px] hover:bg-elevated" onClick={() => { setSelected(today); setCursor({ year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) }); }}>Today</button>
           <button type="button" className="grid h-8 w-8 place-items-center rounded-[8px] hover:bg-elevated" aria-label="Previous month" onClick={() => setCursor((value) => shiftMonth(value.year, value.month, -1))}>
             <ChevronLeft size={16} />
           </button>
@@ -180,7 +207,13 @@ export function CalendarPanel({ events, weekStartsOn, compact = false }: { event
           </button>
         </div>
       </div>
-      {compact ? <p className="mt-1 text-[12px] text-muted">{monthLabel}</p> : null}
+      <div className="mt-3 flex flex-wrap gap-1">
+        {(["all", "deadline", "assessment", "session"] as const).map((item) => (
+          <button key={item} type="button" className={cn("h-7 rounded-full px-2.5 text-[12px] capitalize", kindFilter === item ? "bg-[#EEE5DA] text-[#392E27]" : "text-muted hover:bg-elevated")} onClick={() => setKindFilter(item)}>{item === "all" ? "All dates" : item}</button>
+        ))}
+      </div>
+      {view === "month" ? (
+      <>
       <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[11px] text-muted">
         {labels.map((label) => <div key={label}>{label}</div>)}
       </div>
@@ -188,9 +221,9 @@ export function CalendarPanel({ events, weekStartsOn, compact = false }: { event
         {cells.map((day, index) => {
           if (!day) return <div key={`empty-${index}`} />;
           const iso = isoDate(cursor.year, cursor.month, day);
-          const has = events.some((event) => event.date === iso);
+          const has = visible.some((event) => event.date === iso);
           const isSelected = iso === selected;
-          const isToday = iso === DEMO_TODAY;
+          const isToday = iso === today;
           return (
             <button
               key={iso}
@@ -210,6 +243,24 @@ export function CalendarPanel({ events, weekStartsOn, compact = false }: { event
           );
         })}
       </div>
+      </>
+      ) : null}
+      {view === "week" ? (
+        <div className="mt-3 grid gap-2 sm:grid-cols-7">
+          {week.map((iso) => (
+            <button key={iso} type="button" onClick={() => setSelected(iso)} className={cn("rounded-[10px] border border-line p-2 text-left", iso === selected && "bg-[#F7F2EA]")}>
+              <span className="block text-[11px] text-muted">{formatDate(iso).slice(0, 6)}</span>
+              <span className="mt-1 block text-[12px]">{visible.filter((event) => event.date === iso).length || "—"}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {view === "agenda" ? (
+        <ul className="mt-3 space-y-2">
+          {agenda.length === 0 ? <li className="text-[13px] text-muted">No upcoming dates.</li> : null}
+          {agenda.map((event) => <EventRow key={event.id} event={event} />)}
+        </ul>
+      ) : null}
       <div className="mt-4">
         <p className="text-[12px] font-medium text-muted">{formatDate(selected)}</p>
         {selectedEvents.length === 0 ? <p className="mt-2 text-[13px] text-muted">Nothing scheduled on this date.</p> : null}
@@ -225,8 +276,39 @@ export function CalendarPanel({ events, weekStartsOn, compact = false }: { event
           </div>
         ) : null}
       </div>
+      {onCreate ? (
+        <form className="mt-4 grid gap-2 border-t border-line pt-4" onSubmit={(event) => {
+          event.preventDefault();
+          const message = onCreate({ date: selected, title, kind, detail });
+          setError(message ?? "");
+          if (!message) { setTitle(""); setDetail(""); }
+        }}>
+          <p className="text-[13px] font-medium">Add a date on {formatDate(selected)}</p>
+          <input className="h-10 rounded-[10px] border border-line bg-canvas px-3 text-[13px]" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Title" aria-label="Event title" />
+          <select className="h-10 rounded-[10px] border border-line bg-canvas px-3 text-[13px]" value={kind} onChange={(event) => setKind(event.target.value as CalendarEvent["kind"])} aria-label="Event type">
+            <option value="deadline">Deadline</option>
+            <option value="assessment">Assessment</option>
+            <option value="session">Session</option>
+          </select>
+          <input className="h-10 rounded-[10px] border border-line bg-canvas px-3 text-[13px]" value={detail} onChange={(event) => setDetail(event.target.value)} placeholder="Short note" aria-label="Event note" />
+          {error ? <p className="text-[12px] text-red">{error}</p> : null}
+          <Button type="submit">Add event</Button>
+        </form>
+      ) : null}
     </section>
   );
+}
+
+function weekDates(iso: string, weekStartsOn: "mon" | "sun") {
+  const [year, month, day] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const offset = weekStartsOn === "mon" ? (date.getUTCDay() + 6) % 7 : date.getUTCDay();
+  date.setUTCDate(date.getUTCDate() - offset);
+  return Array.from({ length: 7 }, (_, index) => {
+    const next = new Date(date);
+    next.setUTCDate(date.getUTCDate() + index);
+    return next.toISOString().slice(0, 10);
+  });
 }
 
 function EventRow({ event }: { event: CalendarEvent }) {
@@ -244,10 +326,13 @@ function EventRow({ event }: { event: CalendarEvent }) {
 
 export function CourseArt({ course, className }: { course: Pick<Course, "title" | "cover" | "coverTint">; className?: string }) {
   const [failed, setFailed] = useState(false);
+  const showImage = Boolean(course.cover) && !failed;
   return (
-    <div className={cn("relative aspect-video overflow-hidden bg-[var(--elevated)]", className)} style={{ background: course.coverTint }}>
-      {failed ? <span className="sr-only">{course.title}</span> : (
-        <Image src={course.cover} alt="" width={1400} height={788} className="h-full w-full object-cover" onError={() => setFailed(true)} />
+    <div className={cn("relative aspect-video overflow-hidden bg-[var(--elevated)]", className)} style={{ background: course.coverTint || "#D8C8B8" }}>
+      {showImage ? (
+        <img src={course.cover} alt="" className="h-full w-full object-cover" onError={() => setFailed(true)} />
+      ) : (
+        <span className="grid h-full place-items-center px-3 text-center text-[13px] font-medium text-[#29231F]">{course.title}</span>
       )}
     </div>
   );
@@ -272,7 +357,7 @@ export function CourseCard({
     <article className="flex h-full flex-col overflow-hidden rounded-[14px] border border-line bg-card shadow-[var(--shadow)]">
       <Link href={href} className="block"><CourseArt course={course} /></Link>
       <div className="flex flex-1 flex-col p-4">
-        <p className="text-[12px] text-muted">{course.category}</p>
+        <p className="text-[12px] text-muted">{course.category}{course.sample ? " · Sample" : ""}</p>
         <h3 className="mt-1 text-[15px] font-semibold leading-snug">
           <Link href={href} className="hover:text-blue">{course.title}</Link>
         </h3>
@@ -293,7 +378,7 @@ export function CourseCard({
 export function PersonRow({ person }: { person: User }) {
   return (
     <span className="flex items-center gap-2">
-      <span className="grid h-8 w-8 place-items-center rounded-full text-[11px] font-semibold text-[#08211e]" style={{ background: person.color }}>{initials(person.name)}</span>
+      <span className="grid h-8 w-8 place-items-center overflow-hidden rounded-full text-[11px] font-semibold text-[#29231F]" style={{ background: person.color }}>{person.avatar ? <img src={person.avatar} alt="" className="h-full w-full object-cover" /> : initials(person.name)}</span>
       <span>
         <span className="block text-[13px] font-medium">{person.name}</span>
         <span className="block text-[12px] text-muted">{person.title}</span>

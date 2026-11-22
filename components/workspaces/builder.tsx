@@ -40,11 +40,17 @@ export function CourseBuilder({ base }: { base: "/admin/courses" | "/teach/cours
       <PageHeader
         eyebrow={course.status === "draft" ? "Draft · saved in this browser" : "Published"}
         title={course.title}
-        description={canEdit ? `Last edit ${formatWhen(course.updatedAt)}.` : `View only. Assigned to ${userById(state, course.instructorId)?.name}.`}
+        description={canEdit ? "Details, thumbnail, curriculum, then preview." : `View only. Assigned to ${userById(state, course.instructorId)?.name ?? "an instructor"}.`}
         actions={canEdit ? (
           <>
             {course.status === "draft" ? <Button variant="danger" onClick={() => setConfirmDiscard(true)}>Discard draft</Button> : <Button variant="secondary" onClick={() => unpublishCourse(course.id)}>Unpublish</Button>}
-            <Button onClick={() => setMessage(publishCourse(course.id) ?? "")}>{course.status === "published" ? "Update publish" : "Publish"}</Button>
+            {state.role === "admin" ? (
+              <Button onClick={() => setMessage(publishCourse(course.id) ?? "")}>{course.status === "published" ? "Publish updates" : "Publish"}</Button>
+            ) : course.status === "in_review" ? (
+              <Button disabled>Waiting for approval</Button>
+            ) : (
+              <Button onClick={() => setMessage(publishCourse(course.id) ?? "")}>Submit for approval</Button>
+            )}
           </>
         ) : null}
       />
@@ -98,8 +104,20 @@ function Details({ courseId, disabled }: { courseId: string; disabled: boolean }
       </label>
       <label className="text-[13px] font-medium">Instructor
         <select className="field mt-1" disabled={disabled || state.role !== "admin"} value={course.instructorId} onChange={(event) => set("instructorId", event.target.value)}>
-          {state.users.filter((user) => user.role === "instructor").map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
+          {state.users.filter((user) => user.role === "instructor" || user.role === "admin" || user.id === course.instructorId).map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}
         </select>
+      </label>
+      <label className="text-[13px] font-medium lg:col-span-2">Thumbnail URL
+        <input className="field mt-1" disabled={disabled} placeholder="https:// or leave blank" value={course.cover} onChange={(event) => set("cover", event.target.value)} />
+      </label>
+      <label className="text-[13px] font-medium">Upload thumbnail
+        <input className="field mt-1" disabled={disabled} type="file" accept="image/*" onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (!file || file.size > 350_000) return;
+          const reader = new FileReader();
+          reader.onload = () => { if (typeof reader.result === "string") set("cover", reader.result); };
+          reader.readAsDataURL(file);
+        }} />
       </label>
       <label className="text-[13px] font-medium lg:col-span-2">Summary
         <textarea className="field mt-1 min-h-20" disabled={disabled} value={course.summary} onChange={(event) => set("summary", event.target.value)} />
@@ -117,7 +135,7 @@ function Details({ courseId, disabled }: { courseId: string; disabled: boolean }
             </li>
           ))}
         </ul>
-        <Button className="mt-2" variant="secondary" disabled={disabled} onClick={() => updateCourse(courseId, (draft) => { draft.outcomes.push("New outcome"); })}>Add outcome</Button>
+        <Button className="mt-2" variant="secondary" disabled={disabled} onClick={() => updateCourse(courseId, (draft) => { draft.outcomes.push(""); })}>Add objective</Button>
       </div>
       <label className="text-[13px] font-medium">Assignment title
         <input className="field mt-1" disabled={disabled} value={course.assignment?.title ?? ""} onChange={(event) => updateCourse(courseId, (draft) => { draft.assignment = { title: event.target.value, prompt: draft.assignment?.prompt ?? "", due: draft.assignment?.due ?? "2026-12-12" }; })} />

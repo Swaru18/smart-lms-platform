@@ -1,5 +1,5 @@
 import { monthKey } from "./format";
-import { DEMO_TODAY, SESSION_USER, type Course, type DemoState, type Enrollment, type Role, type User } from "./types";
+import { DEMO_TODAY, type Course, type DemoState, type Enrollment, type Role, type User } from "./types";
 
 export const TREND_MONTHS = ["2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11"];
 
@@ -19,8 +19,12 @@ export function courseById(state: DemoState, id: string) {
   return state.courses.find((course) => course.id === id);
 }
 
-export function sessionUser(state: DemoState, role: Role = state.role) {
-  return userById(state, SESSION_USER[role]) ?? state.users.find((user) => user.role === role);
+export function sessionUser(state: DemoState, role?: Role) {
+  if (!state.sessionUserId) return undefined;
+  const user = userById(state, state.sessionUserId);
+  if (!user) return undefined;
+  if (role && user.role !== role) return undefined;
+  return user;
 }
 
 export function enrollmentView(course: Course, enrollment?: Enrollment) {

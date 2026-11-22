@@ -1,3 +1,4 @@
+/** Historical sample builder. The app does not import this module. */
 import type { Course, DemoState, Enrollment } from "../types";
 import { courses } from "./courses";
 import { quizzes } from "./quizzes";
@@ -90,9 +91,10 @@ export function createSeed(): DemoState {
   });
 
   const state: DemoState = {
-    version: 1,
-    theme: "dark",
+    version: 2,
+    theme: "light",
     role: "admin",
+    sessionUserId: null,
     sidebarCollapsed: false,
     settings: {
       name: "Smart LMS",
@@ -387,6 +389,38 @@ export function createSeed(): DemoState {
     ],
     reviewSnapshot: { asOf: "2026-10-31", pending: 8 },
     learnerSnapshot: { asOf: "2026-10-31", active: 7 },
+    tickets: [
+      {
+        id: "tkt-lesson",
+        name: "Maya Chen",
+        email: "maya.chen@demo.northroom.local",
+        subject: "Next lesson returns to the course page",
+        message: "On Evidence Before Charts, marking a lesson complete brings me back to the course instead of the following lesson. This message stays in the demo and is not emailed.",
+        createdAt: "2026-11-17T09:20:00.000Z",
+        priority: "normal",
+        status: "open",
+      },
+      {
+        id: "tkt-roster",
+        name: "Jonah Ellis",
+        email: "jonah.ellis@demo.northroom.local",
+        subject: "A learner is missing from the roster",
+        message: "One invited learner does not appear on Hybrid Session Craft. I checked the enrollment list in this browser.",
+        createdAt: "2026-11-16T14:05:00.000Z",
+        priority: "high",
+        status: "in_progress",
+      },
+      {
+        id: "tkt-cert",
+        name: "Amira Shah",
+        email: "amira.shah@demo.northroom.local",
+        subject: "Certificate preview wording",
+        message: "The preview should keep saying it is not a verified credential. No change is required on a server.",
+        createdAt: "2026-11-12T11:40:00.000Z",
+        priority: "low",
+        status: "closed",
+      },
+    ],
   };
 
   assertSeed(state);

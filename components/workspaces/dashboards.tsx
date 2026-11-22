@@ -2,70 +2,119 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { BookOpen, ClipboardCheck, Plus, Users } from "lucide-react";
+import { BookOpen, ClipboardCheck, GraduationCap, Plus, Users } from "lucide-react";
 import { formatLongDate, formatRate, formatWhen, greeting } from "@/lib/format";
 import {
-  activeCourseDelta,
-  attentionCourses,
-  engagementBreakdown,
+  enrollmentView,
   learnerEnrollments,
-  monthlyTrend,
   orgCompletion,
   peopleForInstructor,
-  recommendationsFor,
   sessionUser,
   submissionsFor,
-  upcomingEvents,
+  userById,
 } from "@/lib/metrics";
 import { useStore } from "@/lib/store";
 import { DEMO_TODAY } from "@/lib/types";
 import { UserDialog } from "../user-dialog";
-import { Button, PageHeader, Pill } from "../ui";
-import { CalendarPanel, CourseArt, CourseCard, CourseHealth, EngagementPanel, KpiCard, Panel, QuietLink, TrendChart } from "../widgets";
+import { Button, EmptyState, PageHeader, Pill } from "../ui";
+import { CalendarPanel, CourseArt, KpiCard, Panel, QuietLink } from "../widgets";
+import { ProgressBar } from "../ui";
 
 export function AdminHome() {
   const { state } = useStore();
   const [invite, setInvite] = useState(false);
   const person = sessionUser(state, "admin");
   const completion = orgCompletion(state);
-  const engagement = engagementBreakdown(state);
-  const courses = activeCourseDelta(state);
-  const pending = state.submissions.filter((item) => item.status === "pending").length;
-  const active = engagement.find((item) => item.key === "active")?.count ?? 0;
-  const learnerDelta = active - state.learnerSnapshot.active;
+  const students = state.users.filter((user) => user.role === "learner").length;
+  const instructors = state.users.filter((user) => user.role === "instructor").length;
+  const published = state.courses.filter((course) => course.status === "published").length;
+  const pendingApprovals = state.users.filter((user) => user.status === "invited").length + state.courses.filter((course) => course.status === "in_review").length;
+  const recentEnrollments = [...state.enrollments].sort((a, b) => b.enrolledAt.localeCompare(a.enrolledAt)).slice(0, 6);
+  const activity = state.activity.filter((item) => item.roles.includes("admin")).slice(0, 6);
 
   return (
     <div className="space-y-5">
       <PageHeader
         eyebrow={formatLongDate(DEMO_TODAY)}
         title={person ? greeting(person.name) : "Overview"}
-        description="Learning operations for Smart LMS. Counts come from the seeded enrollments in this browser."
+        description="Users, courses and approvals."
         actions={
           <>
-            <Button variant="secondary" onClick={() => setInvite(true)}>Invite learner</Button>
+            <Button variant="secondary" onClick={() => setInvite(true)}>Add student</Button>
             <Link href="/admin/courses/new" className="inline-flex h-10 items-center gap-2 rounded-[11px] bg-blue px-3.5 text-[14px] font-medium text-[var(--on-action)]"><Plus size={16} /> Create course</Link>
           </>
         }
       />
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <KpiCard href="/admin/people?engagement=active" label="Active learners" value={String(active)} hint={`${learnerDelta >= 0 ? "+" : ""}${learnerDelta} since the 31 Oct snapshot`} icon={<Users size={16} />} />
-        <KpiCard href="/admin/courses?status=published" label="Active courses" value={String(courses.active)} hint={`${courses.delta >= 0 ? "+" : ""}${courses.delta} published since 1 Nov`} icon={<BookOpen size={16} />} />
-        <KpiCard href="/admin/reports" label="Completion rate" value={formatRate(completion.completed, completion.total)} hint={`${completion.completed} of ${completion.total} enrollments`} icon={<ClipboardCheck size={16} />} />
-        <KpiCard href="/admin/reports#reviews" label="Pending reviews" value={String(pending)} hint={`${state.reviewSnapshot.pending} on the 31 Oct snapshot`} icon={<ClipboardCheck size={16} />} />
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+        <KpiCard href="/admin/users" label="Total users" value={String(state.users.length)} hint="Accounts stored on this browser" icon={<Users size={16} />} />
+        <KpiCard href="/admin/instructors" label="Instructors" value={String(instructors)} hint="Includes accounts waiting for approval" icon={<GraduationCap size={16} />} />
+        <KpiCard href="/admin/users" label="Students" value={String(students)} hint="Registered student profiles" icon={<Users size={16} />} />
+        <KpiCard href="/admin/courses" label="Published courses" value={String(published)} hint={`${state.courses.length} courses in total`} icon={<BookOpen size={16} />} />
+        <KpiCard href="/admin/instructors" label="Pending approvals" value={String(pendingApprovals)} hint="Instructor accounts and courses in review" icon={<ClipboardCheck size={16} />} />
+        <KpiCard href="/admin/reports" label="Course completion" value={completion.total ? formatRate(completion.completed, completion.total) : "—"} hint={completion.total ? `${completion.completed} of ${completion.total} enrollments` : "Analytics will appear as learning activity grows."} icon={<ClipboardCheck size={16} />} />
       </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <div className="space-y-4 xl:col-span-8">
-          <Panel title="Enrollment and completion" action={<QuietLink href="/admin/reports">Open reports</QuietLink>}>
-            <p className="mb-2 text-[12px] text-muted">June–November 2026 · counts of enrollments and completed enrollments.</p>
-            <TrendChart data={monthlyTrend(state.enrollments)} />
+        <div className="xl:col-span-8">
+          <Panel title="Recent enrollments" action={<QuietLink href="/admin/enrollments">All enrollments</QuietLink>}>
+            {recentEnrollments.length === 0 ? <p className="text-[13px] text-muted">Students will appear when they register or enroll.</p> : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-left text-[13px]">
+                  <thead className="text-muted"><tr><th className="py-2 font-medium">Student</th><th className="py-2 font-medium">Course</th><th className="py-2 font-medium">Enrolled</th><th className="py-2 font-medium">Progress</th><th className="py-2 font-medium">Status</th></tr></thead>
+                  <tbody>
+                    {recentEnrollments.map((enrollment) => {
+                      const learner = userById(state, enrollment.learnerId);
+                      const course = state.courses.find((item) => item.id === enrollment.courseId);
+                      if (!learner || !course) return null;
+                      const view = enrollmentView(course, enrollment);
+                      return (
+                        <tr key={enrollment.id} className="border-t border-line">
+                          <td className="py-3">{learner.name}</td>
+                          <td className="py-3">{course.title}</td>
+                          <td className="py-3">{formatLongDate(enrollment.enrolledAt)}</td>
+                          <td className="py-3 w-36"><ProgressBar value={view.total ? (view.done / view.total) * 100 : 0} label={`${learner.name} progress`} /></td>
+                          <td className="py-3 capitalize">{view.status.replace("_", " ")}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Panel>
-          <CourseHealth rows={attentionCourses(state).slice(0, 4)} hrefFor={(course) => `/admin/courses/${course.id}`} />
         </div>
         <div className="space-y-4 xl:col-span-4">
-          <EngagementPanel rows={engagement} total={engagement.reduce((sum, item) => sum + item.count, 0)} hrefFor={(key) => `/admin/people?engagement=${key}`} />
           <CalendarPanel events={state.events} weekStartsOn={state.settings.weekStartsOn} compact />
+          <Panel title="Recent activity">
+            {activity.length === 0 ? <p className="text-[13px] text-muted">Activity will appear as people use the workspace.</p> : (
+              <ul className="space-y-3">
+                {activity.map((item) => (
+                  <li key={item.id}>
+                    <p className="text-[13px] leading-5">{item.text}</p>
+                    <p className="text-[11px] text-muted">{formatWhen(item.at)}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
         </div>
       </div>
+      <Panel title="Courses" action={<QuietLink href="/admin/courses">Manage courses</QuietLink>}>
+        {state.courses.length === 0 ? <p className="text-[13px] text-muted">Your courses will appear here.</p> : (
+          <ul className="grid gap-3 md:grid-cols-2">
+            {state.courses.slice(0, 4).map((course) => (
+              <li key={course.id}>
+                <Link href={`/admin/courses/${course.id}`} className="grid grid-cols-[96px_minmax(0,1fr)] gap-3 rounded-[12px] border border-line p-2 hover:border-blue/40">
+                  <CourseArt course={course} className="h-16 w-24" />
+                  <span>
+                    <span className="block text-[14px] font-medium">{course.title}</span>
+                    <span className="mt-1 block text-[12px] text-muted">{userById(state, course.instructorId)?.name ?? "Unassigned"} · {course.status.replace("_", " ")}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
       <UserDialog open={invite} onClose={() => setInvite(false)} />
     </div>
   );
@@ -98,6 +147,7 @@ export function TeachHome() {
       </div>
       <div className="grid gap-4 xl:grid-cols-12">
         <Panel className="xl:col-span-7" title="Needs a review" action={<QuietLink href="/teach/reviews">All reviews</QuietLink>}>
+          {pending.length === 0 ? <p className="text-[13px] text-muted">Assignments created for your courses will appear here.</p> : (
           <ul className="divide-y divide-line">
             {pending.map((submission) => {
               const learner = state.users.find((user) => user.id === submission.learnerId);
@@ -113,8 +163,10 @@ export function TeachHome() {
               );
             })}
           </ul>
+          )}
         </Panel>
         <Panel className="xl:col-span-5" title="Recent activity">
+          {state.activity.filter((item) => item.roles.includes("instructor") && (!item.instructorId || item.instructorId === person.id)).length === 0 ? <p className="text-[13px] text-muted">Analytics will appear as learning activity grows.</p> : (
           <ul className="space-y-3">
             {state.activity.filter((item) => item.roles.includes("instructor") && (!item.instructorId || item.instructorId === person.id)).slice(0, 5).map((item) => (
               <li key={item.id}>
@@ -123,6 +175,7 @@ export function TeachHome() {
               </li>
             ))}
           </ul>
+          )}
         </Panel>
       </div>
     </div>
@@ -137,15 +190,20 @@ export function LearnHome() {
   const current = rows.find((row) => row.view.status === "in_progress") ?? rows.find((row) => row.view.status !== "completed");
   const inProgress = rows.filter((row) => row.view.status === "in_progress").length;
   const completed = rows.filter((row) => row.view.status === "completed").length;
-  const recommended = recommendationsFor(state, person.id).slice(0, 2);
-  const deadlines = state.events.filter((event) => event.date >= DEMO_TODAY && rows.some((row) => row.course.id === event.courseId)).slice(0, 3);
+  const today = new Date().toISOString().slice(0, 10);
+  const deadlines = (rows.length
+    ? state.events.filter((event) => event.date >= today && rows.some((row) => row.course.id === event.courseId))
+    : state.events.filter((event) => event.date >= today)
+  ).slice(0, 3);
+  const featured = state.courses.filter((course) => course.status === "published").slice(0, 3);
+  const activity = state.activity.filter((item) => item.learnerId === person.id).slice(0, 4);
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow={formatLongDate(DEMO_TODAY)}
+        eyebrow={formatLongDate(today)}
         title={greeting(person.name)}
-        description="Finish the comparison lesson before the evidence checkpoint on 20 November."
+        description="Continue a course, or explore what is published."
       />
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="lg:col-span-8">
@@ -165,7 +223,9 @@ export function LearnHome() {
                 ) : null}
               </div>
             </article>
-          ) : null}
+          ) : (
+            <EmptyState title="Start a course" body="The catalogue includes sample courses you can enroll in. Your progress starts only after you enroll." action={<Link href="/learn/catalogue" className="inline-flex h-10 items-center rounded-[11px] bg-[#CFAC87] px-3.5 text-[14px] font-medium text-[#392E27]">Explore courses</Link>} />
+          )}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:col-span-4 lg:grid-cols-1">
           <Link href="/learn/catalogue" className="rounded-[14px] border border-line bg-card p-4">
@@ -179,7 +239,8 @@ export function LearnHome() {
         </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Upcoming for you">
+        <Panel title={rows.length ? "Upcoming for you" : "Sample dates"}>
+          {deadlines.length === 0 ? <p className="text-[13px] text-muted">Deadlines will appear when a course includes them.</p> : (
           <ul className="space-y-3">
             {deadlines.map((event) => (
               <li key={event.id} className="flex items-start justify-between gap-3">
@@ -191,37 +252,39 @@ export function LearnHome() {
               </li>
             ))}
           </ul>
+          )}
         </Panel>
         <Panel title="Recent activity">
+          {activity.length === 0 ? <p className="text-[13px] text-muted">Your learning activity will appear here.</p> : (
           <ul className="space-y-3">
-            {state.activity.filter((item) => item.learnerId === person.id || (item.roles.includes("learner") && !item.learnerId)).slice(0, 4).map((item) => (
+            {activity.map((item) => (
               <li key={item.id}>
                 <p className="text-[13px] leading-5">{item.text}</p>
                 <p className="text-[12px] text-muted">{formatWhen(item.at)}</p>
               </li>
             ))}
           </ul>
+          )}
         </Panel>
       </div>
-      <section>
-        <div className="mb-3">
-          <h2 className="text-[16px] font-semibold">Recommended for you</h2>
-          <p className="text-[13px] text-muted">Matched from topics on courses you already have. Not a live recommendation service.</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {recommended.map((item) => (
-            <CourseCard
-              key={item.course.id}
-              course={item.course}
-              instructor={state.users.find((user) => user.id === item.course.instructorId)}
-              href={`/learn/courses/${item.course.id}`}
-              action="View course"
-              meta={`Shares ${item.overlap.join(", ")}`}
-            />
-          ))}
-        </div>
-      </section>
-      <p className="text-[12px] text-muted">Next on the calendar: {upcomingEvents(state, DEMO_TODAY, 1)[0]?.title ?? "nothing else"}.</p>
+      {!current && featured.length ? (
+        <section>
+          <h2 className="text-[16px] font-semibold">Available courses</h2>
+          <ul className="mt-3 grid gap-3 md:grid-cols-3">
+            {featured.map((course) => (
+              <li key={course.id}>
+                <Link href={`/learn/catalogue/${course.id}`} className="block overflow-hidden rounded-[14px] border border-line bg-card">
+                  <CourseArt course={course} />
+                  <span className="block p-3">
+                    <span className="text-[12px] text-muted">{course.category}{course.sample ? " · Sample" : ""}</span>
+                    <span className="mt-1 block text-[15px] font-semibold">{course.title}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

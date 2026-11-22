@@ -1,54 +1,55 @@
 @import "tailwindcss";
 
-:root {
-  color-scheme: dark;
-  --canvas: #111b29;
-  --shell: #101c2b;
-  --card: #1b293a;
-  --elevated: #233449;
-  --ink: #f4f7fb;
-  --muted: #9eadbe;
-  --line: #304155;
-  --teal: #20b6a5;
-  --blue: #4c83eb;
-  --orange: #f28a3d;
-  --purple: #9a5ce6;
-  --green: #2daa72;
-  --red: #e45d62;
-  --on-action: #101c2b;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
-  --scrim: rgba(6, 10, 16, 0.62);
-  --teal-soft: rgba(32, 182, 165, 0.14);
-  --blue-soft: rgba(76, 131, 235, 0.16);
-  --orange-soft: rgba(242, 138, 61, 0.14);
-  --green-soft: rgba(45, 170, 114, 0.14);
-  --red-soft: rgba(228, 93, 98, 0.14);
-  --radius-card: 14px;
-}
-
+:root,
 [data-theme="light"] {
   color-scheme: light;
-  --canvas: #f3f6fa;
-  --shell: #ffffff;
-  --card: #ffffff;
-  --elevated: #f8fafc;
-  --ink: #172437;
-  --muted: #748196;
-  --line: #dfe6ef;
-  --teal: #129c91;
-  --blue: #285fd1;
-  --orange: #e9782b;
-  --purple: #8750d5;
-  --green: #21865b;
-  --red: #d64550;
-  --on-action: #ffffff;
-  --shadow: 0 1px 2px rgba(23, 36, 55, 0.05);
-  --scrim: rgba(17, 27, 41, 0.4);
-  --teal-soft: rgba(18, 156, 145, 0.12);
-  --blue-soft: rgba(40, 95, 209, 0.1);
-  --orange-soft: rgba(233, 120, 43, 0.12);
-  --green-soft: rgba(33, 134, 91, 0.12);
-  --red-soft: rgba(214, 69, 80, 0.1);
+  --canvas: #fbf8f3;
+  --shell: #fffdf9;
+  --card: #fffdf9;
+  --elevated: #f7f2ea;
+  --ink: #392e27;
+  --muted: #756b62;
+  --line: #e9dfd4;
+  --teal: #b9916b;
+  --blue: #cfac87;
+  --orange: #b9916b;
+  --purple: #87715f;
+  --green: #5e7a62;
+  --red: #9c4e45;
+  --on-action: #392e27;
+  --shadow: 0 8px 24px rgba(57, 46, 39, 0.05);
+  --scrim: rgba(57, 46, 39, 0.35);
+  --teal-soft: rgba(185, 145, 107, 0.16);
+  --blue-soft: rgba(207, 172, 135, 0.28);
+  --orange-soft: rgba(185, 145, 107, 0.18);
+  --green-soft: rgba(94, 122, 98, 0.14);
+  --red-soft: rgba(156, 78, 69, 0.12);
+  --radius-card: 16px;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #29231f;
+  --shell: #342720;
+  --card: #3b2e26;
+  --elevated: #49372f;
+  --ink: #fcfaf7;
+  --muted: #d8c8b8;
+  --line: #5c4a3e;
+  --teal: #cfac87;
+  --blue: #cfac87;
+  --orange: #d4b483;
+  --purple: #d8c8b8;
+  --green: #9cbaa2;
+  --red: #e0a8a1;
+  --on-action: #392e27;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --scrim: rgba(20, 14, 10, 0.62);
+  --teal-soft: rgba(216, 200, 184, 0.14);
+  --blue-soft: rgba(216, 200, 184, 0.14);
+  --orange-soft: rgba(212, 180, 131, 0.16);
+  --green-soft: rgba(156, 186, 162, 0.16);
+  --red-soft: rgba(224, 168, 161, 0.16);
 }
 
 @theme inline {
@@ -92,9 +93,11 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 
 :focus-visible {
-  outline: 2px solid var(--blue);
+  outline: 2px solid #87715f;
   outline-offset: 2px;
 }
+
+body { overflow-x: clip; }
 
 ::selection { background: var(--blue-soft); }
 

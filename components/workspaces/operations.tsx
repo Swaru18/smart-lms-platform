@@ -388,6 +388,7 @@ export function ReportsPage() {
         <div className="rounded-[14px] border border-line bg-card p-4"><p className="text-[12px] text-muted">Completion rate</p><p className="text-[24px] font-semibold">{formatRate(completion.completed, completion.total)}</p></div>
       </div>
       <Panel title="Trend for this filter">
+        <div id="revenue" className="sr-only">Revenue figures on the overview are demo data and are not repeated as collected payments here.</div>
         <TrendChart data={monthlyTrend(enrollments)} />
       </Panel>
       <div className="overflow-x-auto rounded-[14px] border border-line">
@@ -474,7 +475,7 @@ export function SettingsPage() {
   const [confirm, setConfirm] = useState(false);
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <PageHeader eyebrow="Settings" title="Organization" description="Preferences for this browser demo. Authentication is not connected." />
+      <PageHeader eyebrow="Settings" title="Organization" description="Preferences for this browser. Authentication is local until Supabase is connected." />
       <form className="space-y-3 rounded-[14px] border border-line bg-card p-4" onSubmit={(event) => { event.preventDefault(); saveSettings(form); }}>
         <label className="block text-[13px] font-medium">Organization name<input className="field mt-1" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label>
         <label className="block text-[13px] font-medium">Short name<input className="field mt-1" value={form.shortName} onChange={(event) => setForm({ ...form, shortName: event.target.value })} /></label>
@@ -497,8 +498,8 @@ export function SettingsPage() {
       </form>
       <section className="rounded-[14px] border border-line p-4 text-[13px] leading-6 text-muted">
         <h2 className="text-[16px] font-semibold text-ink">Later phase</h2>
-        <p className="mt-2">A future version can evaluate Supabase Auth, Postgres, Storage and row level security, with privileged work in server-side functions. Payments stay out of scope until the buyer, pricing and commercial model are confirmed. This screen does not connect to any of those services.</p>
-        <Button className="mt-3" variant="danger" onClick={() => setConfirm(true)}>Reset demo data</Button>
+        <p className="mt-2">Accounts, courses and progress stay in this browser. Passwords are hashed here and are not production credentials. Supabase Auth, Postgres, Storage and row level security are not connected.</p>
+        <Button className="mt-3" variant="danger" onClick={() => setConfirm(true)}>Clear learning records</Button>
       </section>
       {confirm ? (
         <div className="flex gap-2">
@@ -519,12 +520,28 @@ export function ProfilePage() {
   if (!person) return null;
   return (
     <div className="mx-auto max-w-xl space-y-5">
-      <PageHeader eyebrow="Profile" title={person.name} description={`${person.role} · demo persona. Changes stay in this browser.`} />
+      <PageHeader eyebrow="Profile" title={person.name} description={`${person.email} · ${person.role}. Saved on this browser.`} />
       <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); saveUser({ ...person, name, title, bio }); }}>
+        <div className="flex items-center gap-3">
+          <span className="grid h-14 w-14 place-items-center overflow-hidden rounded-full bg-[#D8C8B8] text-[16px] font-semibold text-[#29231F]">
+            {person.avatar ? <img src={person.avatar} alt="" className="h-full w-full object-cover" /> : person.name.slice(0, 1)}
+          </span>
+          <label className="text-[13px] font-medium">Profile image
+            <input className="field mt-1" type="file" accept="image/*" onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file || file.size > 350_000) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                if (typeof reader.result === "string") saveUser({ ...person, avatar: reader.result });
+              };
+              reader.readAsDataURL(file);
+            }} />
+          </label>
+        </div>
         <label className="block text-[13px] font-medium">Name<input className="field mt-1" value={name} onChange={(event) => setName(event.target.value)} /></label>
         <label className="block text-[13px] font-medium">Title<input className="field mt-1" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
         <label className="block text-[13px] font-medium">Bio<textarea className="field mt-1 min-h-28" value={bio} onChange={(event) => setBio(event.target.value)} /></label>
-        <p className="text-[12px] text-muted">{person.email} · not a live inbox</p>
+        <p className="text-[12px] text-muted">{person.email}</p>
         <Button type="submit">Save profile</Button>
       </form>
     </div>
@@ -532,11 +549,11 @@ export function ProfilePage() {
 }
 
 export function CalendarRoute() {
-  const { state } = useStore();
+  const { state, addEvent } = useStore();
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow={state.settings.name} title="Calendar" description={`Week starts on ${state.settings.weekStartsOn === "mon" ? "Monday" : "Sunday"}. Timezone label: ${state.settings.timezone}.`} />
-      <CalendarPanel events={state.events} weekStartsOn={state.settings.weekStartsOn} />
+      <PageHeader eyebrow={state.settings.name} title="Calendar" description={`Week starts on ${state.settings.weekStartsOn === "mon" ? "Monday" : "Sunday"}. Dates added here stay in this browser.`} />
+      <CalendarPanel events={state.events} weekStartsOn={state.settings.weekStartsOn} onCreate={addEvent} />
     </div>
   );
 }

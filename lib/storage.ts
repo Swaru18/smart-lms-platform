@@ -14,8 +14,10 @@ export const demoStorage = {
       const raw = window.localStorage.getItem(STATE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw) as DemoState;
-      if (!parsed || parsed.version !== STATE_VERSION || !Array.isArray(parsed.courses)) return null;
-      if (!isTheme(parsed.theme)) parsed.theme = "dark";
+      if (!parsed || parsed.version !== STATE_VERSION || !Array.isArray(parsed.courses) || !Array.isArray(parsed.users)) return null;
+      if (!isTheme(parsed.theme)) parsed.theme = "light";
+      if (!Array.isArray(parsed.tickets)) parsed.tickets = [];
+      if (typeof parsed.sessionUserId !== "string") parsed.sessionUserId = null;
       if (parsed.settings && (parsed.settings.name === "Northroom Demo" || parsed.settings.shortName === "Northroom")) {
         parsed.settings.name = "Smart LMS";
         parsed.settings.shortName = "Smart LMS";

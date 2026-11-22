@@ -21,14 +21,14 @@ import { answerCompanion, COMPANION_PROMPTS } from "@/lib/companion";
 import { cn, formatWhen, initials } from "@/lib/format";
 import { navFor, ROLE_HOME, ROLE_LABEL, roleFromPath, titleFromPath } from "@/lib/nav";
 import { searchRecords, sessionUser } from "@/lib/metrics";
+import { authRepository } from "@/lib/services/auth-repository";
 import { useStore } from "@/lib/store";
-import type { Role } from "@/lib/types";
-import { Button, ConfirmDialog, DemoChip, Drawer, IconButton, SkeletonBlock } from "./ui";
+import { Button, ConfirmDialog, Drawer, IconButton, SkeletonBlock } from "./ui";
 
 export function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <Link href="/" className="flex items-center gap-3 rounded-[10px] outline-offset-4">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-teal text-[#08211e]" aria-hidden>
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-blue text-[var(--on-action)]" aria-hidden>
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
           <path d="M2.2 4.2h13.6M2.2 4.2v9.1c2.3-1.35 4.7-1.35 6.8 0 2.1-1.35 4.5-1.35 6.8 0V4.2" stroke="currentColor" strokeWidth="1.4" />
         </svg>
@@ -48,14 +48,18 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const { state } = useStore();
   const items = navFor(state.role);
   const collapsed = state.sidebarCollapsed;
+  let previousGroup = "";
   return (
     <nav className="space-y-1" aria-label="Workspace">
       {items.map((item) => {
+        const showGroup = !collapsed && item.group !== previousGroup;
+        previousGroup = item.group;
         const active = pathname === item.href || (item.href !== ROLE_HOME[state.role] && pathname.startsWith(item.href));
         const Icon = item.icon;
         return (
+          <div key={item.href}>
+            {showGroup ? <p className="px-3 pt-3 pb-1 text-[11px] font-medium tracking-wide text-muted">{item.group}</p> : null}
           <Link
-            key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
             title={collapsed ? item.label : undefined}
@@ -70,6 +74,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             <Icon size={18} aria-hidden />
             {collapsed ? <span className="sr-only">{item.label}</span> : item.label}
           </Link>
+          </div>
         );
       })}
     </nav>
@@ -77,7 +82,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
-  const { state, setRole, setSidebarCollapsed } = useStore();
+  const { state, setSidebarCollapsed, logout } = useStore();
   const router = useRouter();
   const person = sessionUser(state);
   const collapsed = state.sidebarCollapsed && !onNavigate;
@@ -86,39 +91,15 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
       <div className={cn("flex items-center", collapsed ? "justify-center px-2" : "px-3")}>
         <Logo compact={collapsed} />
       </div>
-      <div className={cn("mt-5", collapsed ? "px-2" : "px-3")}>
-        {collapsed ? <DemoChip /> : (
-          <label className="block">
-            <span className="mb-1.5 flex items-center justify-between text-[11px] text-muted">
-              Demo mode
-              <span>Not access control</span>
-            </span>
-            <select
-              className="field"
-              aria-label="Demo role"
-              value={state.role}
-              onChange={(event) => {
-                const role = event.target.value as Role;
-                setRole(role);
-                router.push(ROLE_HOME[role]);
-                onNavigate?.();
-              }}
-            >
-              <option value="admin">Admin · Amira Shah</option>
-              <option value="instructor">Instructor · Jonah Ellis</option>
-              <option value="learner">Learner · Maya Chen</option>
-            </select>
-          </label>
-        )}
-      </div>
-      <div className="mt-5 px-2">
-        {!collapsed ? <p className="px-3 pb-2 text-[11px] font-medium tracking-wide text-muted">{navFor(state.role)[0]?.group}</p> : null}
+      <div className="mt-5 min-h-0 flex-1 overflow-y-auto px-2">
         <NavLinks onNavigate={onNavigate} />
       </div>
       <div className="mt-auto px-3 pt-4">
         {person ? (
           <Link href="/account" onClick={onNavigate} className={cn("flex items-center gap-3 rounded-[12px] px-1 py-2 hover:bg-elevated", collapsed && "justify-center")}>
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[12px] font-semibold text-[#08211e]" style={{ background: person.color }}>{initials(person.name)}</span>
+            <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full text-[12px] font-semibold text-[#29231F]" style={{ background: person.color }}>
+              {person.avatar ? <img src={person.avatar} alt="" className="h-full w-full object-cover" /> : initials(person.name)}
+            </span>
             {collapsed ? null : (
               <span className="min-w-0">
                 <span className="block truncate text-[13px] font-medium">{person.name}</span>
@@ -127,6 +108,19 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
             )}
           </Link>
         ) : null}
+        <button
+          type="button"
+          title="Sign out"
+          className={cn("mt-2 flex h-10 w-full items-center gap-2 rounded-[10px] px-3 text-[13px] text-muted hover:bg-elevated hover:text-ink", collapsed && "justify-center px-0")}
+          onClick={() => {
+            onNavigate?.();
+            logout();
+            router.push("/");
+          }}
+        >
+          <LogOut size={16} />
+          {collapsed ? <span className="sr-only">Sign out</span> : "Sign out"}
+        </button>
         <button
           type="button"
           className="mt-2 hidden h-10 w-full items-center justify-center gap-2 rounded-[10px] text-[13px] text-muted hover:bg-elevated hover:text-ink lg:flex"
@@ -170,7 +164,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center px-4 pt-[12vh]">
       <button type="button" className="absolute inset-0 bg-[var(--scrim)]" aria-label="Close search" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-label="Search the demo" className="relative w-full max-w-xl overflow-hidden rounded-[16px] border border-line bg-shell shadow-[var(--shadow)]">
+      <div role="dialog" aria-modal="true" aria-label="Search" className="relative w-full max-w-xl overflow-hidden rounded-[16px] border border-line bg-shell shadow-[var(--shadow)]">
         <div className="flex items-center gap-2 border-b border-line px-3">
           <Search size={16} className="text-muted" />
           <input
@@ -191,7 +185,7 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
           />
         </div>
         <ul className="max-h-80 overflow-y-auto p-2">
-          {flat.length === 0 ? <li className="px-3 py-6 text-center text-[13px] text-muted">Nothing in the demo matches that.</li> : null}
+          {flat.length === 0 ? <li className="px-3 py-6 text-center text-[13px] text-muted">Nothing matches that search.</li> : null}
           {flat.map((item, itemIndex) => (
             <li key={`${item.kind}-${item.label}`}>
               <button
@@ -244,7 +238,7 @@ function StudyCompanion() {
         <Button className="mt-3" onClick={() => setAnswer(answerCompanion(question))} disabled={!question.trim()}>Show prepared answer</Button>
         {answer ? (
           <div className="mt-4 rounded-[12px] border border-line bg-elevated p-3">
-            <p className="text-[12px] font-medium text-teal">Demo — simulated response</p>
+            <p className="text-[12px] font-medium text-teal">Prepared answer</p>
             <p className="mt-2 text-[13px] leading-6">{answer}</p>
           </div>
         ) : null}
@@ -257,7 +251,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const reduce = useReducedMotion();
-  const { hydrated, state, setRole, toggleTheme, resetDemo, markNotification, markAllNotifications } = useStore();
+  const { hydrated, state, toggleTheme, resetDemo, markNotification, markAllNotifications, logout } = useStore();
   const [mobileNav, setMobileNav] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -271,9 +265,16 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const unread = notes.filter((item) => !item.read).length;
 
   useEffect(() => {
-    const next = roleFromPath(pathname);
-    if (next && next !== state.role) setRole(next);
-  }, [pathname, setRole, state.role]);
+    if (!hydrated) return;
+    if (!person) {
+      if (authRepository.readSession()) return;
+      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      return;
+    }
+    if (person.status !== "active") return;
+    const area = roleFromPath(pathname);
+    if (area && area !== person.role) router.replace(ROLE_HOME[person.role]);
+  }, [hydrated, pathname, person, router]);
 
   useEffect(() => {
     document.title = `${title} · Smart LMS`;
@@ -310,7 +311,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  if (!hydrated) {
+  if (!hydrated || !person) {
     return (
       <div className="min-h-screen bg-canvas p-6">
         <SkeletonBlock className="h-14 w-full" />
@@ -321,6 +322,22 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
           <SkeletonBlock className="h-28" />
         </div>
         <SkeletonBlock className="mt-4 h-80" />
+      </div>
+    );
+  }
+
+  if (person.status !== "active") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-canvas px-6">
+        <div className="max-w-md rounded-[14px] border border-line bg-card p-6">
+          <h1 className="text-[22px] font-semibold">{person.status === "suspended" ? "Account suspended" : "Waiting for approval"}</h1>
+          <p className="mt-2 text-[14px] leading-6 text-muted">
+            {person.status === "suspended"
+              ? "An administrator has suspended this account."
+              : "An administrator needs to activate this instructor account before the workspace opens."}
+          </p>
+          <button type="button" className="mt-4 h-10 rounded-[11px] bg-blue px-4 text-[14px] text-[var(--on-action)]" onClick={() => { logout(); router.push("/login"); }}>Sign out</button>
+        </div>
       </div>
     );
   }
@@ -338,7 +355,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b border-line bg-shell/95 px-3 backdrop-blur-sm sm:px-5">
           <IconButton label="Open navigation" className="lg:hidden" onClick={() => setMobileNav(true)}><Menu size={18} /></IconButton>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[12px] text-muted">{ROLE_LABEL[state.role]} workspace</p>
+            <p className="truncate text-[12px] text-muted">{state.role === "admin" ? `Admin / ${title}` : `${ROLE_LABEL[state.role]} workspace`}</p>
             <p className="truncate text-[14px] font-medium">{title}</p>
           </div>
           <button type="button" onClick={() => setSearchOpen(true)} className="hidden h-10 min-w-0 items-center gap-2 rounded-[11px] border border-line bg-card px-3 text-[13px] text-muted md:flex md:w-64">
@@ -359,7 +376,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
                   <button type="button" className="text-[12px] text-blue" onClick={markAllNotifications}>Mark all read</button>
                 </div>
                 <ul>
-                  {notes.length === 0 ? <li className="px-2 py-4 text-[13px] text-muted">No demo notifications for this role.</li> : null}
+                  {notes.length === 0 ? <li className="px-2 py-4 text-[13px] text-muted">No notifications yet.</li> : null}
                   {notes.map((note) => (
                     <li key={note.id}>
                       <Link
@@ -385,21 +402,17 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
             {state.theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </IconButton>
           <div className="relative" ref={profileRef}>
-            <button type="button" className="grid h-10 w-10 place-items-center rounded-full text-[12px] font-semibold text-[#08211e]" style={{ background: person?.color ?? "#20B6A5" }} aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>
+            <button type="button" className="grid h-10 w-10 place-items-center overflow-hidden rounded-full text-[12px] font-semibold text-[#29231F]" style={{ background: person.color }} aria-haspopup="menu" aria-expanded={profileOpen} onClick={() => setProfileOpen((value) => !value)}>
               <span className="sr-only">Account menu</span>
-              {person ? initials(person.name) : <UserRound size={16} />}
+              {person.avatar ? <img src={person.avatar} alt="" className="h-full w-full object-cover" /> : initials(person.name)}
             </button>
             {profileOpen ? (
               <div role="menu" className="absolute right-0 mt-2 w-56 rounded-[14px] border border-line bg-shell p-1.5 shadow-[var(--shadow)]">
-                <p className="px-2 py-2 text-[12px] text-muted">{person?.name}<br />{ROLE_LABEL[state.role]} · demo</p>
+                <p className="px-2 py-2 text-[12px] text-muted">{person.name}<br />{person.email}<br />{ROLE_LABEL[person.role]}</p>
                 <Link href="/account" role="menuitem" className="flex items-center gap-2 rounded-[8px] px-2 py-2 text-[13px] hover:bg-elevated" onClick={() => setProfileOpen(false)}><UserRound size={15} /> Profile</Link>
-                {(["admin", "instructor", "learner"] as Role[]).map((role) => (
-                  <button key={role} type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-[8px] px-2 py-2 text-left text-[13px] hover:bg-elevated" onClick={() => { setRole(role); setProfileOpen(false); router.push(ROLE_HOME[role]); }}>
-                    Demo as {ROLE_LABEL[role]}
-                  </button>
-                ))}
-                <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-[8px] px-2 py-2 text-left text-[13px] hover:bg-elevated" onClick={() => { setProfileOpen(false); setResetOpen(true); }}><RotateCcw size={15} /> Reset demo data</button>
-                <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-[8px] px-2 py-2 text-left text-[13px] hover:bg-elevated" onClick={() => router.push("/")}><LogOut size={15} /> Leave demo</button>
+                {state.role === "admin" ? <Link href="/admin/settings" role="menuitem" className="flex items-center gap-2 rounded-[8px] px-2 py-2 text-[13px] hover:bg-elevated" onClick={() => setProfileOpen(false)}>Settings</Link> : null}
+                {state.role === "admin" ? <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-[8px] px-2 py-2 text-left text-[13px] hover:bg-elevated" onClick={() => { setProfileOpen(false); setResetOpen(true); }}><RotateCcw size={15} /> Clear learning records</button> : null}
+                <button type="button" role="menuitem" className="flex w-full items-center gap-2 rounded-[8px] px-2 py-2 text-left text-[13px] hover:bg-elevated" onClick={() => { logout(); router.push("/"); }}><LogOut size={15} /> Sign out</button>
               </div>
             ) : null}
           </div>
@@ -414,9 +427,9 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
       <ConfirmDialog
         open={resetOpen}
-        title="Reset demo data?"
-        body="This restores courses, people, progress and reviews to the original seed in this browser."
-        confirmLabel="Reset demo"
+        title="Clear learning records?"
+        body="Courses, enrollments, submissions and notifications are removed from this browser. Accounts stay."
+        confirmLabel="Clear records"
         tone="danger"
         onClose={() => setResetOpen(false)}
         onConfirm={() => { resetDemo(); setResetOpen(false); }}

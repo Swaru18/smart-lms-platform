@@ -6,56 +6,63 @@ import { useStore } from "@/lib/store";
 import type { Engagement, Role, User, UserStatus } from "@/lib/types";
 import { Button, Modal, SelectInput, TextArea, TextInput } from "./ui";
 
-const colors = ["#2F6F8F", "#3E6B62", "#8C5A3C", "#5C5270", "#3D5E72", "#6E5344"];
+const colors = ["#D8C8B8", "#A18B7B", "#CDBBA8", "#E8E0D7", "#765C4B"];
 
 export function UserDialog({
   open,
   initial,
   onClose,
+  defaultRole = "learner",
 }: {
   open: boolean;
   initial?: User | null;
   onClose: () => void;
+  defaultRole?: Role;
 }) {
   return (
-    <Modal open={open} title={initial ? "Edit person" : "Add a demo person"} description="Saved in this browser only. No invitation is sent." onClose={onClose} wide>
-      {open ? <UserForm key={initial?.id ?? "new"} initial={initial} onClose={onClose} /> : null}
+    <Modal open={open} title={initial?.id ? "Edit person" : "Add person"} description="Saved on this browser. A password lets them sign in here." onClose={onClose} wide>
+      {open ? <UserForm key={initial?.id || "new"} initial={initial?.id ? initial : null} defaultRole={defaultRole} onClose={onClose} /> : null}
     </Modal>
   );
 }
 
-function UserForm({ initial, onClose }: { initial?: User | null; onClose: () => void }) {
-  const { saveUser } = useStore();
+function UserForm({ initial, onClose, defaultRole }: { initial?: User | null; onClose: () => void; defaultRole: Role }) {
+  const { provisionAccount } = useStore();
   const [name, setName] = useState(initial?.name ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
-  const [role, setRole] = useState<Role>(initial?.role ?? "learner");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState<Role>(initial?.role ?? defaultRole);
   const [status, setStatus] = useState<UserStatus>(initial?.status ?? "active");
   const [title, setTitle] = useState(initial?.title ?? "");
   const [engagement, setEngagement] = useState<Engagement>(initial?.engagement ?? "inactive");
   const [bio, setBio] = useState(initial?.bio ?? "");
   const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
 
   return (
     <form
       className="grid gap-3"
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault();
-        if (name.trim().length < 3) return setError("Enter a full name.");
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError("Enter an email-shaped address. It is not contacted.");
-        if (title.trim().length < 2) return setError("Add a short title.");
+        if (name.trim().length < 2) return setError("Enter a full name.");
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError("Enter a valid email address.");
         const user: User = {
-          id: initial?.id ?? newId("user"),
+          id: initial?.id || newId("user"),
           name: name.trim(),
           email: email.trim(),
           role,
           status,
-          title: title.trim(),
+          title: title.trim() || (role === "admin" ? "Administrator" : role === "instructor" ? "Instructor" : "Student"),
           engagement: role === "learner" ? engagement : undefined,
-          lastActive: initial?.lastActive ?? "2026-11-19",
-          bio: bio.trim() || "Added in the demo roster.",
+          lastActive: initial?.lastActive ?? new Date().toISOString().slice(0, 10),
+          bio: bio.trim(),
           color: initial?.color ?? colors[Math.floor(Math.random() * colors.length)],
+          avatar: initial?.avatar,
         };
-        saveUser(user);
+        setPending(true);
+        const result = await provisionAccount(user, password || undefined);
+        setPending(false);
+        if (result) return setError(result);
         onClose();
       }}
     >
@@ -65,6 +72,9 @@ function UserForm({ initial, onClose }: { initial?: User | null; onClose: () => 
         </label>
         <label className="block text-[13px] font-medium">Email
           <TextInput className="mt-1.5" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+        </label>
+        <label className="block text-[13px] font-medium sm:col-span-2">Password
+          <TextInput className="mt-1.5" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder={initial ? "Leave blank to keep the current password" : "At least 8 characters, with a letter and a number"} />
         </label>
         <label className="block text-[13px] font-medium">Role
           <SelectInput className="mt-1.5" value={role} onChange={(event) => setRole(event.target.value as Role)}>
@@ -100,7 +110,7 @@ function UserForm({ initial, onClose }: { initial?: User | null; onClose: () => 
       {error ? <p className="text-[13px] text-red" role="alert">{error}</p> : null}
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button type="submit">{initial ? "Save changes" : "Add person"}</Button>
+        <Button type="submit" disabled={pending}>{pending ? "Saving…" : initial ? "Save changes" : "Add person"}</Button>
       </div>
     </form>
   );

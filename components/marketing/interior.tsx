@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Award,
   BarChart3,
@@ -13,42 +12,24 @@ import {
   Presentation,
   Users,
 } from "lucide-react";
-import { ROLE_HOME } from "@/lib/nav";
-import { useStore } from "@/lib/store";
-import type { Role } from "@/lib/types";
 import { PageIntro, SiteFrame } from "./chrome";
 import { ContactForm, DemoForm } from "./forms";
 
 const featureNotes = [
   { icon: BookOpen, title: "Smart Course Management", text: "Create a course, keep it in draft, then publish it. Modules and lessons stay in a fixed order a learner can follow." },
-  { icon: Users, title: "Student Management", text: "The people directory lists learners, instructors and the organization owner. Status and last activity come from the sample records." },
-  { icon: Presentation, title: "Instructor Workspace", text: "Jonah Ellis and Lena Cho each have courses, a roster and submissions. You can open that desk from the demo login." },
-  { icon: BarChart3, title: "Learning Analytics", text: "Charts read the enrollments already in the browser. They update when you complete a lesson or reset the demo." },
+  { icon: Users, title: "Student Management", text: "Students appear when they register. Status and last activity come from those accounts." },
+  { icon: Presentation, title: "Instructor Workspace", text: "Instructors manage their own courses, roster and submissions." },
+  { icon: BarChart3, title: "Learning Analytics", text: "Charts read enrollments stored in this browser." },
   { icon: ClipboardCheck, title: "Assessments & Examinations", text: "Quizzes sit on lessons. Assignments have a prompt, a due date and a place to write a response." },
   { icon: LineChart, title: "Progress Tracking", text: "Marking a lesson complete writes that lesson id onto the enrollment. The course page shows the new share finished." },
-  { icon: Award, title: "Certificates", text: "A certificate preview appears on the learner achievements page. It is labeled as a demo document, not a verified credential." },
+  { icon: Award, title: "Certificates", text: "A certificate preview appears when every lesson in a course is complete. It is not an accredited credential." },
   { icon: Megaphone, title: "Communication & Announcements", text: "Administrators can post a notice for learners, instructors or everyone. It appears in the notification list for that role." },
 ];
 
 const resources = [
-  {
-    title: "Start from the performance, not the topic list",
-    text: "A short course holds when the first line names what someone should do differently on a real task. The sample course Designing a Short Course walks through that cut: one outcome, one practice, one check. If the outline is a list of subjects, it is still a syllabus, not a module.",
-  },
-  {
-    title: "Put the caveat next to the number",
-    text: "Weekly reviews fail when the chart is asked to do the thinking. Evidence Before Charts asks you to write the decision, the comparison and the limit in the same place. Use it when a count has doubled and nobody has asked whether the pool of people doubled too.",
-  },
-  {
-    title: "Design the mixed room you actually have",
-    text: "Hybrid Session Craft is a 45-minute plan for a room where some people are remote. Count them before you design the activity. Silence on a call is often a design problem, not a personality.",
-  },
-];
-
-const demos: Array<{ role: Role; name: string; title: string; text: string }> = [
-  { role: "learner", name: "Maya Chen", title: "Student", text: "Resume a lesson, take a checkpoint and submit a short assignment." },
-  { role: "instructor", name: "Jonah Ellis", title: "Instructor", text: "Open your courses, the roster and the submissions waiting for a score." },
-  { role: "admin", name: "Amira Shah", title: "Institution", text: "See enrollment, completion, reviews and the courses that need attention." },
+  { title: "Write the outcome first", text: "A course is easier to follow when the first line says what the learner will be able to do." },
+  { title: "Keep the path short", text: "Modules and lessons should be only as long as the practice they support." },
+  { title: "Review the work, not the decoration", text: "Assignments need a prompt, a due date and a place for feedback." },
 ];
 
 export function AboutPage() {
@@ -57,13 +38,13 @@ export function AboutPage() {
       <PageIntro
         eyebrow="About"
         title="A learning platform with the record attached."
-        lede="Smart LMS is built for schools, academies and workplace programs that need courses, teaching and progress in one interface. This website is the public face of that product. The workspaces behind Login are a working frontend demo."
+        lede="Courses, teaching and progress in one workspace."
       />
       <div className="mx-auto grid max-w-[1180px] gap-12 px-5 py-16 sm:px-8 lg:grid-cols-12">
         <div className="lg:col-span-5">
-          <h2 className="text-[28px] font-semibold tracking-tight">What you can trust in this release</h2>
-          <p className="mt-4 text-[16px] leading-7 text-muted">Navigation, course filters, lesson completion, charts and forms all run in the browser. A role switch is a demo control. It is not authentication, and it does not check a password.</p>
-          <p className="mt-4 text-[16px] leading-7 text-muted">A later phase can connect accounts, a database and file storage. Those services are not wired up here, and the interface does not pretend they are.</p>
+          <h2 className="text-[28px] font-semibold tracking-tight">What this release stores</h2>
+          <p className="mt-4 text-[16px] leading-7 text-muted">Accounts, courses and progress stay in this browser. Passwords are hashed locally. This is not production authentication.</p>
+          <p className="mt-4 text-[16px] leading-7 text-muted">Supabase Auth, the database and file storage are planned for the next phase. They are not connected yet.</p>
         </div>
         <div className="lg:col-span-7">
           <div className="relative aspect-[16/10] overflow-hidden">
@@ -95,7 +76,7 @@ export function FeaturesPage() {
       <PageIntro
         eyebrow="Features"
         title="Eight parts of the learning operation."
-        lede="Each item below is present in the demo workspaces. Open Login after you read them and the same names appear in the navigation."
+        lede="The same areas appear in the admin, instructor and student workspaces."
       />
       <div className="mx-auto max-w-[860px] px-5 py-14 sm:px-8">
         {featureNotes.map((feature, index) => {
@@ -110,7 +91,7 @@ export function FeaturesPage() {
             </article>
           );
         })}
-        <Link href="/login" className="mt-8 inline-flex h-11 items-center rounded-full bg-teal px-5 text-[14px] font-semibold text-[#08211e]">Open a demo workspace</Link>
+        <Link href="/signup" className="mt-8 inline-flex h-11 items-center rounded-full bg-blue px-5 text-[14px] font-semibold text-[var(--on-action)]">Create account</Link>
       </div>
     </SiteFrame>
   );
@@ -122,7 +103,7 @@ export function InstitutionsPage() {
       <PageIntro
         eyebrow="For institutions"
         title="Run the catalogue, the people and the reviews together."
-        lede="An institution in this demo is the organization workspace. It is where courses are published, people are listed and completion is read across enrollments."
+        lede="Administrators publish courses, manage people and read completion."
       />
       <div className="mx-auto grid max-w-[1180px] items-start gap-12 px-5 py-16 sm:px-8 lg:grid-cols-2">
         <div className="relative aspect-[16/11] overflow-hidden">
@@ -132,11 +113,11 @@ export function InstitutionsPage() {
           <ol className="divide-y divide-line border-y border-line">
             {[
               ["Course creation", "Draft a course, add modules and publish when the path is ready."],
-              ["Student enrollment", "Learners in the sample are already enrolled. New people can be invited inside the demo, and the record stays in this browser."],
+              ["Student enrollment", "Students enroll in published courses. Records stay in this browser."],
               ["Assignment management", "Each published course can carry one assignment with a prompt and a due date."],
               ["Assessment management", "Quizzes are attached to lessons and scored in the learner workspace."],
               ["Progress monitoring", "Activity and completion stand in for attendance. There is no separate register in this phase."],
-              ["Performance analytics", "The reports page charts completion from the seeded enrollments."],
+              ["Performance analytics", "Reports use the enrollments that exist. Empty workspaces stay empty."],
             ].map(([title, text], index) => (
               <li key={title} className="py-4">
                 <p className="text-[12px] font-semibold text-teal">{String(index + 1).padStart(2, "0")}</p>
@@ -146,7 +127,7 @@ export function InstitutionsPage() {
             ))}
           </ol>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Link href="/login" className="inline-flex h-11 items-center rounded-full bg-teal px-5 text-[14px] font-semibold text-[#08211e]">Enter as an institution</Link>
+            <Link href="/setup" className="inline-flex h-11 items-center rounded-full bg-blue px-5 text-[14px] font-semibold text-[var(--on-action)]">Set up an administrator</Link>
             <Link href="/demo" className="inline-flex h-11 items-center rounded-full border border-line px-5 text-[14px] font-semibold">Book a demo</Link>
           </div>
         </div>
@@ -160,8 +141,8 @@ export function ResourcesPage() {
     <SiteFrame>
       <PageIntro
         eyebrow="Resources"
-        title="Three notes from the sample courses."
-        lede="These are short readings written for this demo. They point at courses you can open. They are not a journal and they do not cite outside studies."
+        title="Notes for course authors."
+        lede="Short reminders. They are not a journal."
       />
       <div className="mx-auto max-w-[760px] px-5 py-14 sm:px-8">
         {resources.map((item) => (
@@ -170,7 +151,7 @@ export function ResourcesPage() {
             <p className="mt-3 text-[16px] leading-7 text-muted">{item.text}</p>
           </article>
         ))}
-        <Link href="/courses" className="mt-8 inline-flex h-11 items-center rounded-full bg-teal px-5 text-[14px] font-semibold text-[#08211e]">Open the courses</Link>
+        <Link href="/courses" className="mt-8 inline-flex h-11 items-center rounded-full bg-blue px-5 text-[14px] font-semibold text-[var(--on-action)]">Open the courses</Link>
       </div>
     </SiteFrame>
   );
@@ -181,8 +162,8 @@ export function ContactPage() {
     <SiteFrame>
       <PageIntro
         eyebrow="Contact"
-        title="Write to the demo, or use the workspace."
-        lede="Messages typed here stay in this browser. The email address is a placeholder for the product, not a monitored inbox."
+        title="Send a note."
+        lede="Messages stay in this browser. The address is not a monitored inbox."
       />
       <div className="mx-auto grid max-w-[1180px] gap-12 px-5 py-14 sm:px-8 lg:grid-cols-2">
         <ContactForm />
@@ -209,37 +190,11 @@ export function ContactPage() {
 }
 
 export function LoginPage() {
-  const router = useRouter();
-  const { setRole } = useStore();
   return (
     <SiteFrame>
-      <PageIntro
-        eyebrow="Login"
-        title="Choose a demo role."
-        lede="There is no password. Choosing a person switches the workspace and keeps your edits in this browser. Do not treat this as a secure sign-in."
-      />
-      <div className="mx-auto max-w-[760px] px-5 py-12 sm:px-8">
-        <ul className="divide-y divide-line border-y border-line">
-          {demos.map((entry) => (
-            <li key={entry.role}>
-              <button
-                type="button"
-                className="flex w-full flex-col gap-1 py-5 text-left hover:text-teal sm:flex-row sm:items-baseline sm:justify-between sm:gap-8"
-                onClick={() => {
-                  setRole(entry.role);
-                  router.push(ROLE_HOME[entry.role]);
-                }}
-              >
-                <span>
-                  <span className="block text-[12px] tracking-[0.12em] text-muted uppercase">{entry.title}</span>
-                  <span className="mt-1 block text-[20px] font-semibold">{entry.name}</span>
-                </span>
-                <span className="max-w-sm text-[14px] leading-6 text-muted">{entry.text}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-        <p className="mt-6 text-[13px] leading-6 text-muted">Reset is available inside each workspace if you want the original sample records back.</p>
+      <PageIntro eyebrow="Sign in" title="Use your account." lede="Sign in with the email and password stored on this browser." />
+      <div className="mx-auto max-w-[640px] px-5 py-12 sm:px-8">
+        <Link href="/login" className="inline-flex h-11 items-center rounded-full bg-blue px-5 text-[14px] font-semibold text-[var(--on-action)]">Go to sign in</Link>
       </div>
     </SiteFrame>
   );
@@ -263,12 +218,11 @@ export function DemoPage() {
 export function PrivacyPage() {
   return (
     <SiteFrame>
-      <PageIntro eyebrow="Privacy" title="What this demo stores." lede="Smart LMS Phase 1 does not send your form entries to a server." />
+      <PageIntro eyebrow="Privacy" title="What this browser stores." lede="Nothing on this site is sent to a server yet." />
       <article className="mx-auto max-w-[760px] px-5 py-12 text-[16px] leading-7 sm:px-8">
-        <p>Journey requests, contact messages and demo bookings are written to localStorage in this browser. Course progress, announcements and profile edits use the same device storage.</p>
-        <p className="mt-4">Clearing site data, or using Reset inside a workspace, removes those records from this browser. There is no account to delete on a server because no account is created.</p>
-        <p className="mt-4">Photographs are loaded from Unsplash. The demo does not run analytics or advertising scripts of its own.</p>
-        <p className="mt-4 text-muted">This page describes the demo. It is not a legal privacy policy for a live service.</p>
+        <p>Accounts, hashed passwords, courses and messages are stored in this browser. They are not available on another device.</p>
+        <p className="mt-4">Clearing site data removes them. There is no server account to delete.</p>
+        <p className="mt-4 text-muted">This note describes the current prototype. It is not a legal privacy policy.</p>
       </article>
     </SiteFrame>
   );
@@ -277,12 +231,12 @@ export function PrivacyPage() {
 export function TermsPage() {
   return (
     <SiteFrame>
-      <PageIntro eyebrow="Terms" title="How to use this demo." lede="Smart LMS on this site is a product demonstration, not a contracted learning service." />
+      <PageIntro eyebrow="Terms" title="How to use this prototype." lede="Smart LMS on this site is not a contracted learning service." />
       <article className="mx-auto max-w-[760px] px-5 py-12 text-[16px] leading-7 sm:px-8">
-        <p>Sample courses, people and statistics are illustrative. The figures on the homepage are labeled as demo numbers and are not a claim about real learners or satisfaction.</p>
-        <p className="mt-4">Certificates in the learner workspace are previews. They are not accredited credentials.</p>
-        <p className="mt-4">Do not enter passwords, payment details or private student records. The forms are not a secure channel.</p>
-        <p className="mt-4 text-muted">This page describes the demo. It is not a commercial terms agreement.</p>
+        <p>Sign-in checks a password hash stored in this browser. That is not production authentication, and it does not protect an account across devices.</p>
+        <p className="mt-4">Certificates are previews. They are not accredited credentials.</p>
+        <p className="mt-4">Do not enter payment details or private records you cannot afford to keep on this device.</p>
+        <p className="mt-4 text-muted">This page is not a commercial terms agreement.</p>
       </article>
     </SiteFrame>
   );

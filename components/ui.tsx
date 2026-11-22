@@ -18,8 +18,8 @@ export function Button({
       type={type}
       className={cn(
         "inline-flex h-10 items-center justify-center gap-2 rounded-[11px] px-3.5 text-[14px] font-medium transition-colors disabled:opacity-50",
-        variant === "primary" && "bg-blue text-[var(--on-action)] hover:brightness-110",
-        variant === "secondary" && "border border-line bg-card hover:bg-elevated",
+        variant === "primary" && "bg-[#CFAC87] text-[#392E27] hover:bg-[#B9916B]",
+        variant === "secondary" && "border border-[#E3D4C4] bg-[#F7F2EA] text-[#392E27] hover:bg-[#EEE5DA]",
         variant === "quiet" && "bg-transparent text-muted hover:bg-elevated hover:text-ink",
         variant === "danger" && "border border-red/40 bg-transparent text-red hover:bg-[var(--red-soft)]",
         className,

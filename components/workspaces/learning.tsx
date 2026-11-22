@@ -89,7 +89,7 @@ export function Catalogue() {
 
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="Catalogue" title="Courses" description="Published courses in the demo. Enrolling updates your local progress only." actions={
+      <PageHeader eyebrow="Catalogue" title="Explore courses" description="Published courses you can enroll in." actions={
         <div className="flex items-center gap-2">
           <Button variant="secondary" className="lg:hidden" onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={16} /> Filters</Button>
           <div className="flex rounded-[11px] border border-line p-1">
@@ -104,7 +104,7 @@ export function Catalogue() {
         {filters}
         <Button className="mt-4 w-full" onClick={() => setFiltersOpen(false)}>Show {courses.length} courses</Button>
       </Drawer>
-      {courses.length === 0 ? <EmptyState title="No courses match" body="Clear a filter or try another word. Draft courses stay hidden from learners." /> : null}
+      {courses.length === 0 ? <EmptyState title="No courses yet" body="Published courses will appear here." /> : null}
       {view === "cards" ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {courses.map((course) => {
@@ -334,7 +334,7 @@ export function AssessmentList() {
   const learner = sessionUser(state, "learner");
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="Assessments" title="Checks" description="Three prepared quizzes. Scores stay in this browser." />
+      <PageHeader eyebrow="Assessments" title="Checks" description="Sample checks are listed here. Enroll in the course before you start. Scores stay in this browser." />
       <ul className="grid gap-3">
         {state.quizzes.map((quiz) => {
           const course = courseById(state, quiz.courseId);
@@ -350,7 +350,7 @@ export function AssessmentList() {
                 </div>
                 {attempt ? <Pill tone={attempt.score >= 70 ? "green" : "orange"}>{attempt.score}% · {attempt.score >= 70 ? "Passed" : "Try again"}</Pill> : <Pill>Not started</Pill>}
               </div>
-              {enrolled ? <Link href={`/learn/assessments/${quiz.id}`} className="mt-3 inline-block text-[13px] font-medium text-blue">{attempt ? "Review attempt" : "Start"}</Link> : <p className="mt-3 text-[13px] text-muted">Enroll in the course to open this check.</p>}
+              {enrolled ? <Link href={`/learn/assessments/${quiz.id}`} className="mt-3 inline-flex h-10 items-center rounded-[11px] bg-[#CFAC87] px-3.5 text-[13px] font-medium text-[#392E27]">{attempt ? "Review attempt" : "Start"}</Link> : <Link href={`/learn/catalogue/${quiz.courseId}`} className="mt-3 inline-block text-[13px] font-medium text-[#87715F]">Enroll to start</Link>}
             </li>
           );
         })}
@@ -474,6 +474,7 @@ export function Assignments() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const rows = learnerEnrollments(state, learner?.id ?? "").filter((row) => row.course.assignment);
+  const available = state.courses.filter((course) => course.status === "published" && course.assignment && !rows.some((row) => row.course.id === course.id));
   const visible = rows.filter((row) => {
     const submission = state.submissions.find((item) => item.learnerId === learner?.id && item.courseId === row.course.id);
     if (filter === "pending") return submission?.status === "pending";
@@ -490,7 +491,23 @@ export function Assignments() {
         <option value="pending">Pending</option>
         <option value="reviewed">Reviewed</option>
       </select>
-      {visible.length === 0 ? <EmptyState title="Nothing in this filter" body="Change the filter to see other assignments on your courses." /> : null}
+      {visible.length === 0 && available.length === 0 ? <EmptyState title="Nothing in this filter" body="Enroll in a course with an assignment, or change the filter." /> : null}
+      {available.length ? (
+        <section>
+          <h2 className="text-[15px] font-semibold">Available after enrollment</h2>
+          <ul className="mt-3 space-y-3">
+            {available.map((course) => (
+              <li key={course.id} className="rounded-[14px] border border-line bg-card p-4">
+                <p className="text-[12px] text-muted">{course.title}{course.sample ? " · Sample" : ""}</p>
+                <h3 className="text-[16px] font-semibold">{course.assignment?.title}</h3>
+                <p className="mt-1 text-[13px] text-muted">Due {formatLongDate(course.assignment?.due ?? "")}</p>
+                <p className="mt-2 text-[14px] leading-6">{course.assignment?.prompt}</p>
+                <Link href={`/learn/catalogue/${course.id}`} className="mt-3 inline-flex h-10 items-center rounded-[11px] bg-[#CFAC87] px-3.5 text-[14px] font-medium text-[#392E27]">Enroll to submit</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <ul className="space-y-4">
         {visible.map((row) => {
           const submission = state.submissions.find((item) => item.learnerId === learner?.id && item.courseId === row.course.id);
@@ -508,7 +525,7 @@ export function Assignments() {
               {submission ? (
                 <div className="mt-3 rounded-[12px] bg-elevated p-3 text-[13px] leading-6">
                   <p>{submission.body}</p>
-                  {submission.feedback ? <p className="mt-2 text-muted">Feedback · {submission.score}/100 · {submission.feedback}</p> : <p className="mt-2 text-muted">Waiting for a reviewer in the demo.</p>}
+                  {submission.feedback ? <p className="mt-2 text-muted">Feedback · {submission.score}/100 · {submission.feedback}</p> : <p className="mt-2 text-muted">Waiting for a reviewer.</p>}
                 </div>
               ) : (
                 <form className="mt-3" onSubmit={(event) => {
@@ -534,7 +551,7 @@ export function CalendarPage() {
   const { state } = useStore();
   return (
     <div className="space-y-5">
-      <PageHeader eyebrow="Calendar" title="Agenda" description="Demo dates for assessments, deadlines and sessions. Changing the month or the day updates the list." />
+      <PageHeader eyebrow="Calendar" title="Important dates" description="Sample dates stay on the calendar until a course is replaced. Your own deadlines appear after you enroll." />
       <CalendarPanel events={state.events} weekStartsOn={state.settings.weekStartsOn} />
     </div>
   );

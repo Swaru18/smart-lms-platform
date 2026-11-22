@@ -3,7 +3,7 @@ export type ThemeMode = "dark" | "light";
 export type Engagement = "active" | "at_risk" | "inactive" | "completed";
 export type UserStatus = "active" | "invited" | "suspended";
 export type CourseLevel = "Beginner" | "Intermediate" | "Advanced";
-export type CourseStatus = "draft" | "published";
+export type CourseStatus = "draft" | "in_review" | "published";
 export type LessonType = "text" | "video" | "resource" | "quiz";
 export type SubmissionStatus = "pending" | "reviewed";
 export type EventKind = "assessment" | "deadline" | "session";
@@ -20,6 +20,7 @@ export type User = {
   lastActive: string;
   bio: string;
   color: string;
+  avatar?: string;
 };
 
 export type Lesson = {
@@ -63,6 +64,7 @@ export type Course = {
   updatedAt: string;
   assignment?: CourseAssignment;
   modules: Module[];
+  sample?: boolean;
 };
 
 export type Enrollment = {
@@ -151,10 +153,26 @@ export type ActivityItem = {
   instructorId?: string;
 };
 
+export type CategoryStatus = "active" | "archived";
+
 export type Category = {
   id: string;
   name: string;
   description: string;
+  status?: CategoryStatus;
+};
+
+export type TicketStatus = "open" | "in_progress" | "closed";
+
+export type Ticket = {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  createdAt: string;
+  priority: "low" | "normal" | "high";
+  status: TicketStatus;
 };
 
 export type OrgSettings = {
@@ -166,9 +184,10 @@ export type OrgSettings = {
 };
 
 export type DemoState = {
-  version: 1;
+  version: 2;
   theme: ThemeMode;
   role: Role;
+  sessionUserId: string | null;
   sidebarCollapsed: boolean;
   settings: OrgSettings;
   categories: Category[];
@@ -182,15 +201,10 @@ export type DemoState = {
   events: CalendarEvent[];
   notifications: NotificationItem[];
   activity: ActivityItem[];
+  tickets: Ticket[];
   reviewSnapshot: { asOf: string; pending: number };
   learnerSnapshot: { asOf: string; active: number };
 };
 
 export const DEMO_TODAY = "2026-11-19";
-export const STATE_VERSION = 1;
-
-export const SESSION_USER: Record<Role, string> = {
-  admin: "amira",
-  instructor: "jonah",
-  learner: "maya",
-};
+export const STATE_VERSION = 2;
